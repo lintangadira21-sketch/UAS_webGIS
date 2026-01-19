@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, user-scalable=no, maximum-scale=1, width=device-width">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>WebGIS Fasilitas Kesehatan DKI Jakarta</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Judul Peta */
+        .map-title {
+            position: absolute;
+            top: 15px;
+            left: 60px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 12px 18px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            border-left: 5px solid #2e7d32;
+            max-width: 400px;
+            width: fit-content;
+            white-space: nowrap;
+        }
+
+        .map-title h1 {
+            margin: 0;
+            font-size: 16px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #1b5e20;
+            font-weight: 800;
+        }
+
+        .map-title p {
+            margin: 3px 0 0 0;
+            font-size: 10.5px;
+            color: #555;
+            line-height: 1.3;
+        }
+
+        /* Legenda */
+        .legend-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            width: 220px;
+            border: 1px solid #eee;
+        }
+
+        .legend-panel h3 {
+            margin: 0 0 15px 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: #444;
+            text-align: left;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            background: #f9f9f9;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .legend-item:hover {
+            transform: translateX(-5px);
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            margin-right: 10px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            flex-shrink: 0;
+        }
+
+        .legend-label {
+            font-size: 12px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 8px;
+            margin-top: 12px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: background-color 0.3s;
+        }
+
+        .reset-btn:hover {
+            background: #d32f2f;
+        }
+
+        /* Tooltip untuk wilayah */
+        .leaflet-tooltip.wilayah-tooltip {
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-weight: bold;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Label wilayah di peta */
+        .wilayah-label {
+            font-weight: bold;
+            font-size: 13px;
+            color: #333;
+            text-shadow:
+                -1px -1px 0 white,
+                1px -1px 0 white,
+                -1px 1px 0 white,
+                1px 1px 0 white;
+            pointer-events: none;
+            text-align: center;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 3px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* Kompas Arah Mata Angin */
+        .compass-control {
+            position: absolute;
+            bottom: 400px;
+            right: 140px;
+            z-index: 1001;
+            width: 125px;
+            height: 125px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        .compass-image {
+            width: 100%;
+            height: 100%;
+            background-image: url('assets/kompas.png');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: drop-shadow(2px 4px 6px rgba(0, 0, 0, 0.3));
+        }
+
+        /* Skala */
+        .leaflet-control-scale {
+            margin-bottom: 20px !important;
+            margin-left: 10px !important;
+            background: rgba(255, 255, 255, 0.9) !important;
+            padding: 5px 10px !important;
+            border-radius: 4px !important;
+            border: 1px solid #ccc !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <!-- Judul Peta -->
+    <div class="map-title">
+        <h1>🏥🚑 Fasilitas Kesehatan DKI Jakarta</h1>
+        <p>Peta sebaran 15 rumah sakit dan 10 puskesmas di seluruh wilayah DKI Jakarta</p>
+    </div>
+
+    <!-- Kompas Arah Mata Angin -->
+    <div class="compass-control">
+        <div class="compass-image"></div>
+    </div>
+
+    <!-- Legenda -->
+    <div class="legend-panel">
+        <h3>LEGENDA PETA</h3>
+
+        <div class="legend-item" data-wilayah="Jakarta Pusat">
+            <div class="legend-color" style="background-color: #e53935;"></div>
+            <div class="legend-label">Jakarta Pusat</div>
+        </div>
+
+        <div class="legend-item" data-wilayah="Jakarta Selatan">
+            <div class="legend-color" style="background-color: #1e88e5;"></div>
+            <div class="legend-label">Jakarta Selatan</div>
+        </div>
+
+        <div class="legend-item" data-wilayah="Jakarta Barat">
+            <div class="legend-color" style="background-color: #43a047;"></div>
+            <div class="legend-label">Jakarta Barat</div>
+        </div>
+
+        <div class="legend-item" data-wilayah="Jakarta Timur">
+            <div class="legend-color" style="background-color: #fdd835;"></div>
+            <div class="legend-label">Jakarta Timur</div>
+        </div>
+
+        <div class="legend-item" data-wilayah="Jakarta Utara">
+            <div class="legend-color" style="background-color: #7b1fa2;"></div>
+            <div class="legend-label">Jakarta Utara</div>
+        </div>
+
+        <button class="reset-btn" id="resetBtn">RESET PILIHAN</button>
+    </div>
+
+    <script>
+        var map = L.map('map').setView([-6.2088, 106.8456], 11);
+
+        // OpenStreetMap (default layer)
+        var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: 'Lintang Adira Kinaya - 24611050'
+        }).addTo(map);
+
+        // CartoDB Positron 
+        var CartoDB_Positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: 'Lintang Adira Kinaya - 24611050'
+        });
+
+        // ESRI World Street Map 
+        var Esri_WorldStreetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Lintang Adira Kinaya - 24611050'
+        });
+
+        // OpenTopoMap (topography)
+        var OpenTopoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Lintang Adira Kinaya - 24611050'
+        });
+
+        var hospitalIcon = L.icon({
+            iconUrl: 'assets/rs.png',
+            iconSize: [60, 60],
+            iconAnchor: [25, 50],
+            popupAnchor: [0, -50]
+        });
+
+        var healthCenterIcon = L.icon({
+            iconUrl: 'assets/puskesmas.png',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30],
+            popupAnchor: [0, -30]
+        });
+
+        var fasilitasKesehatan = [
+            { nama: "RSUD Tarakan Jakarta", alamat: "Jl. Kyai Caringin No.7, RT.11/RW.4, Cideng, Kecamatan Gambir, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10150", telp: "(021) 50900303", jam: "Buka 24 jam", lat: -6.1716782024126795, lng: 106.81026754975689, wilayah: "Jakarta Pusat" },
+            { nama: "Rumah Sakit Islam Jakarta Cempaka Putih", alamat: "Jl. Cemp. Putih Tengah IX, RT.11/RW.5, Cemp. Putih Tim., Kec. Cemp. Putih, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10510", telp: "(021) 4250451", jam: "Buka 24 jam", lat: -6.170554695431946, lng: 106.87087120624683, wilayah: "Jakarta Pusat" },
+            { nama: "RS Abdi Waluyo", alamat: "Jl. HOS. Cokroaminoto No.31-33, RT.1/RW.3, Gondangdia, Kec. Menteng, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10310", telp: "(021) 3144989", jam: "Buka 24 jam", lat: -6.189833397705066, lng: 106.82909152893878, wilayah: "Jakarta Pusat" },
+            { nama: "RS Pusat Pertamina", alamat: "Jl. Kyai Maja No.43, Gunung, Kec. Kby. Baru, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12120", telp: "(021) 150442", jam: "Buka 24 jam", lat: -6.2399015298368585, lng: 106.79336899091871, wilayah: "Jakarta Selatan" },
+            { nama: "RSUD Pasar Minggu", alamat: "Jl. TB Simatupang No.1, RT.9/RW.4, Ragunan, Ps. Minggu, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12550", telp: "(021) 50866999", jam: "Buka 24 jam", lat: -6.294090917782136, lng: 106.81982331757807, wilayah: "Jakarta Selatan" },
+            { nama: "Rumah Sakit Medistra", alamat: "Jl. Gatot Subroto No.59, RT.1/RW.4, Kuningan Tim., Kecamatan Setiabudi, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12950", telp: "(021) 5210200", jam: "Buka 24 jam", lat: -6.23970967702806, lng: 106.83383642082934, wilayah: "Jakarta Selatan" },
+            { nama: "RSUD Cengkareng", alamat: "Jl. Bumi Cengkareng Indah No.1, RT.13/RW.10, Cengkareng Tim., Kecamatan Cengkareng, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11730", telp: "(021) 54372874", jam: "Buka 24 jam", lat: -6.143024968273116, lng: 106.7347836929213, wilayah: "Jakarta Barat" },
+            { nama: "RS EMC Grha Kedoya", alamat: "Jl. Panjang No.26, RT.15/RW.7, Kedoya Utara, Kec. Kb. Jeruk, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11520", telp: "(021) 29779977", jam: "Buka 24 jam", lat: -6.1681385366667865, lng: 106.76515304771057, wilayah: "Jakarta Barat" },
+            { nama: "RS Pondok Indah - Puri Indah", alamat: "Jl. Puri Indah Raya Blok S-2, RT.1/RW.2, Kembangan Sel., Kec. Kembangan, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11610", telp: "(021) 25695200", jam: "Buka 24 jam", lat: -6.186180356072416, lng: 106.7353562130179, wilayah: "Jakarta Barat" },
+            { nama: "RSUD Kramat Jati", alamat: "Jl. Raya Inpres No.48, RT.9/RW.9, Kp. Tengah, Kec. Kramat jati, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13540", telp: "(021) 87791352", jam: "Buka 24 jam", lat: -6.286664658554806, lng: 106.8622958047667, wilayah: "Jakarta Timur" },
+            { nama: "Rumah Sakit Umum Daerah Pasar Rebo", alamat: "Jl. TB Simatupang No.30, RT.9/RW.2, Gedong, Kec. Ps. Rebo, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13760", telp: "(021) 8401127", jam: "Buka 24 jam", lat: -6.304017809303674, lng: 106.86231709530001, wilayah: "Jakarta Timur" },
+            { nama: "Rumah Sakit Umum Daerah Budhi Asih", alamat: "Jl. Dewi Sartika No.200, RT.1/RW.3, Cawang, Kec. Kramat jati, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13630", telp: "(021) 8090282", jam: "Buka 24 jam", lat: -6.255855820578275, lng: 106.86326226963311, wilayah: "Jakarta Timur" },
+            { nama: "RSU Hermina Podomoro", alamat: "Blok E 3, Jl. Danau Agung 2 No.28 - 30, RT.3/RW.16, Sunter Agung, Kec. Tj. Priok, Jkt Utara, Daerah Khusus Ibukota Jakarta 14350", telp: "(021) 6404910", jam: "Buka 24 jam", lat: -6.145532187418705, lng: 106.8615236671326, wilayah: "Jakarta Utara" },
+            { nama: "Rumah Sakit Umum Gading Pluit", alamat: "Jl. Boulevard Timur, Klp. Gading Tim., Kec. Klp. Gading, Jkt Utara, Daerah Khusus Ibukota Jakarta 14250", telp: "(021) 4521001", jam: "Buka 24 jam", lat: -6.166058403160314, lng: 106.91596881336926, wilayah: "Jakarta Utara" },
+            { nama: "RSUD Cilincing", alamat: "Jl. Madya Kebantenan No.4 4, RT.4/RW.2, Semper Tim., Kec. Cilincing, Jkt Utara, Daerah Khusus Ibukota Jakarta 14130", telp: "(021) 4412889", jam: "Buka 24 jam", lat: -6.113012242518251, lng: 106.9263054244371, wilayah: "Jakarta Utara" },
+            { nama: "Puskesmas Kecamatan Menteng", alamat: "Jl. Pegangsaan Barat No.14, RT.16/RW.5, Menteng, Kec. Menteng, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10310", telp: "(021) 31904965", jam: "Buka 24 jam", lat: -6.199431339693606, lng: 106.8413302902736, wilayah: "Jakarta Pusat" },
+            { nama: "Puskesmas Senen", alamat: "Jl. Kramat Sawah 7, RT.8/RW.7, Paseban, Kec. Senen, Kota Jakarta Pusat, Daerah Khusus Ibukota Jakarta 10440", telp: "(021) 3146194", jam: "Buka 24 jam", lat: -6.189597765674145, lng: 106.85286415142762, wilayah: "Jakarta Pusat" },
+            { nama: "Puskesmas Kecamatan Kebayoran Baru", alamat: "Jl. Iskandarsyah Raya No.105 5, RT.5/RW.5, Melawai, Kec. Kby. Baru, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12160", telp: "(021) 7264856", jam: "Buka 24 jam", lat: -6.247276739699017, lng: 106.80558167258215, wilayah: "Jakarta Selatan" },
+            { nama: "Puskesmas Kecamatan Jagakarsa", alamat: "Jl. Sirsak No.1, RT.1/RW.2, Jagakarsa, Kec. Jagakarsa, Kota Jakarta Selatan, Daerah Khusus Ibukota Jakarta 12620", telp: "Tidak tersedia", jam: "Buka 24 jam", lat: -6.336707393337881, lng: 106.81758803446503, wilayah: "Jakarta Selatan" },
+            { nama: "Puskesmas Kec. Kebon Jeruk", alamat: "Jl. Raya Kb. Jeruk No.2 9, RT.9/RW.1, Kb. Jeruk, Kec. Kb. Jeruk, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11510", telp: "(021) 5309838", jam: "Buka 24 jam", lat: -6.198901153433954, lng: 106.76526362249858, wilayah: "Jakarta Barat" },
+            { nama: "Puskesmas Kecamatan Kalideres", alamat: "Jl. Tanjung Pura II No.14, RT.6/RW.5, Pegadungan, Kec. Kalideres, Kota Jakarta Barat, Daerah Khusus Ibukota Jakarta 11830", telp: "(021) 54313154", jam: "Buka 24 jam", lat: -6.130161977530252, lng: 106.69630600420804, wilayah: "Jakarta Barat" },
+            { nama: "Puskesmas Kecamatan Jatinegara", alamat: "Jl. Matraman Raya No.220, RT.3/RW.6, Bali Mester, Kecamatan Jatinegara, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13310", telp: "(021) 8195146", jam: "Buka 24 jam", lat: -6.214107395508133, lng: 106.86238401794881, wilayah: "Jakarta Timur" },
+            { nama: "Puskesmas Kecamatan Pulo Gadung", alamat: "Jl. Kayu Putih VIII No.2B, RT.8/RW.5, Pulo Gadung, Kec. Pulo Gadung, Kota Jakarta Timur, Daerah Khusus Ibukota Jakarta 13260", telp: "(021) 4890519", jam: "Buka 24 jam", lat: -6.186118951939141, lng: 106.8955784900249, wilayah: "Jakarta Timur" },
+            { nama: "Puskesmas kecamatan Kelapa Gading", alamat: "Jl. Raya Pelepah Indah Blok HF 7, RT.4/RW.7, Klp. Gading Bar., Kec. Klp. Gading, Jkt Utara, Daerah Khusus Ibukota Jakarta 14240", telp: "(021) 45853300", jam: "Buka 24 jam", lat: -6.155804294581115, lng: 106.90467762189138, wilayah: "Jakarta Utara" },
+            { nama: "Puskesmas Kecamatan Penjaringan", alamat: "Jl. Teluk Gong Raya No.2 8, RT.8/RW.10, Pejagalan, Kecamatan Penjaringan, Jkt Utara, Daerah Khusus Ibukota Jakarta 14450", telp: "(021) 66694917", jam: "Buka 24 jam", lat: -6.138031277911144, lng: 106.78092820214381, wilayah: "Jakarta Utara" }
+        ];
+
+        var markersLayer = L.layerGroup();
+        var wilayahLayer = null;
+        var wilayahLabels = [];
+
+        function getColor(wilayah) {
+            return wilayah === 'Jakarta Pusat' ? '#e53935' :
+                wilayah === 'Jakarta Selatan' ? '#1e88e5' :
+                    wilayah === 'Jakarta Barat' ? '#43a047' :
+                        wilayah === 'Jakarta Timur' ? '#fdd835' :
+                            wilayah === 'Jakarta Utara' ? '#7b1fa2' :
+                                '#9e9e9e';
+        }
+
+        fasilitasKesehatan.forEach(function (fasilitas) {
+            var iconToUse = fasilitas.nama.includes("RS") || fasilitas.nama.includes("Rumah Sakit") ? hospitalIcon : healthCenterIcon;
+
+            var marker = L.marker([fasilitas.lat, fasilitas.lng], {
+                icon: iconToUse
+            });
+
+            var telpDisplay = fasilitas.telp || "Tidak tersedia";
+            var encodedName = encodeURIComponent(fasilitas.nama);
+            var encodedAddress = encodeURIComponent(fasilitas.alamat);
+            var googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${encodedName}+${encodedAddress}`;
+
+            var popupContent = `
+                <div style="max-width: 260px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px; border-radius: 6px 6px 0 0; margin: -8px -8px 8px -8px;">
+                        <h3 style="margin: 0; color: white; font-size: 14px; font-weight: 600; line-height: 1.3;">${fasilitas.nama}</h3>
+                    </div>
+                    
+                    <div style="padding: 0 3px;">
+                        <div style="display: flex; align-items: flex-start; margin-bottom: 8px; padding: 6px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #667eea;">
+                            <div style="min-width: 20px; text-align: center; margin-right: 8px;">
+                                <span style="color: #667eea; font-size: 14px;">📍</span>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #555; font-size: 11px; margin-bottom: 2px;">Alamat</div>
+                                <div style="color: #333; font-size: 11px; line-height: 1.3;">${fasilitas.alamat}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; margin-bottom: 8px; padding: 6px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #4CAF50;">
+                            <div style="min-width: 20px; text-align: center; margin-right: 8px;">
+                                <span style="color: #4CAF50; font-size: 14px;">📞</span>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #555; font-size: 11px; margin-bottom: 2px;">Telepon</div>
+                                <div style="color: #333; font-size: 11px;">${telpDisplay}</div>
+                            </div>
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; margin-bottom: 10px; padding: 6px; background: #f8f9fa; border-radius: 4px; border-left: 3px solid #FF9800;">
+                            <div style="min-width: 20px; text-align: center; margin-right: 8px;">
+                                <span style="color: #FF9800; font-size: 14px;">⏰</span>
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; color: #555; font-size: 11px; margin-bottom: 2px;">Jam Operasional</div>
+                                <div style="color: #333; font-size: 11px;">${fasilitas.jam}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 12px; text-align: center;">
+                        <a href="${googleMapsLink}" target="_blank" 
+                           style="display: inline-block; 
+                                  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); 
+                                  color: white; 
+                                  padding: 8px 15px; 
+                                  text-decoration: none; 
+                                  border-radius: 4px; 
+                                  font-size: 12px;
+                                  font-weight: 500;
+                                  transition: all 0.3s ease;
+                                  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);">
+                            <span style="font-size: 14px; margin-right: 5px;">🗺️</span> Buka di Google Maps
+                        </a>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            marker.bindTooltip(fasilitas.nama, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -10]
+            });
+
+            marker.addTo(markersLayer);
+        });
+
+        markersLayer.addTo(map);
+
+        fetch('assets/dkijakarta-wilayah.geojson')
+            .then(res => res.json())
+            .then(geojsonData => {
+                wilayahLayer = L.geoJSON(geojsonData, {
+                    style: function (feature) {
+                        var wilayah = feature.properties.kab_kota.replace('Kota Administrasi ', '');
+                        return {
+                            fillColor: getColor(wilayah),
+                            color: '#000',
+                            weight: 1,
+                            fillOpacity: 0.15
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        var wilayah = feature.properties.kab_kota.replace('Kota Administrasi ', '');
+
+                        layer.on({
+                            mouseover: function (e) {
+                                this.setStyle({
+                                    weight: 1,
+                                    fillOpacity: 0.4
+                                });
+
+                                layer.bindTooltip(wilayah, {
+                                    permanent: false,
+                                    direction: 'center',
+                                    className: 'wilayah-tooltip',
+                                    opacity: 0.9
+                                }).openTooltip();
+                            },
+                            mouseout: function (e) {
+                                if (wilayahLayer) {
+                                    wilayahLayer.resetStyle(e.target);
+                                }
+                                layer.closeTooltip();
+                            }
+                        });
+
+                        if (feature.geometry && feature.geometry.type === "Polygon") {
+                            var centroid = layer.getBounds().getCenter();
+                            var label = L.marker(centroid, {
+                                icon: L.divIcon({
+                                    className: 'wilayah-label',
+                                    html: `<div>${wilayah}</div>`,
+                                    iconSize: [120, 30]
+                                }),
+                                interactive: false
+                            }).addTo(map);
+                            wilayahLabels.push(label);
+                        }
+                    }
+                }).addTo(map);
+
+                overlayMaps["Batas Wilayah DKI Jakarta"] = wilayahLayer;
+            })
+            .catch(err => {
+                console.warn("Gagal memuat batas wilayah:", err);
+            });
+
+        function highlightWilayah(wilayahName) {
+            if (!wilayahLayer) return;
+
+            wilayahLayer.eachLayer(function (layer) {
+                var wilayah = layer.feature.properties.kab_kota.replace('Kota Administrasi ', '');
+                if (wilayah === wilayahName) {
+                    layer.setStyle({
+                        weight: 1,
+                        fillOpacity: 0.6,
+                        color: '#000'
+                    });
+
+                    map.fitBounds(layer.getBounds().pad(0.1));
+                } else {
+                    layer.setStyle({
+                        weight: 1,
+                        fillOpacity: 0.1,
+                        color: '#ccc'
+                    });
+                }
+            });
+        }
+
+        function resetWilayah() {
+            if (wilayahLayer) {
+                wilayahLayer.eachLayer(function (layer) {
+                    var wilayah = layer.feature.properties.kab_kota.replace('Kota Administrasi ', '');
+                    layer.setStyle({
+                        fillColor: getColor(wilayah),
+                        color: '#000',
+                        weight: 1,
+                        fillOpacity: 0.15
+                    });
+                });
+            }
+
+            map.setView([-6.2088, 106.8456], 11);
+        }
+
+        document.querySelectorAll('.legend-item').forEach(item => {
+            item.addEventListener('click', function () {
+                var wilayah = this.getAttribute('data-wilayah');
+                highlightWilayah(wilayah);
+            });
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', function () {
+            resetWilayah();
+        });
+
+        // Layer control
+        var baseMaps = {
+            "OpenStreetMap": OpenStreetMap_Mapnik,
+            "CartoDB Light": CartoDB_Positron,
+            "ESRI Street": Esri_WorldStreetMap,
+            "Topography": OpenTopoMap
+        };
+
+        var overlayMaps = {
+            "Fasilitas Kesehatan": markersLayer
+        };
+
+        L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        L.control.scale({
+            position: 'bottomleft',
+            imperial: false,
+            metric: true,
+            maxWidth: 200
+        }).addTo(map);
+    </script>
+</body>
+
+</html>
